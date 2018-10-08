@@ -1729,13 +1729,3 @@ print("The housing dataset is", round(house_prices_train.memory_usage(index=True
 #
 # # Print memory usage in gb after performing memory efficiency steps
 # print("The housing dataset is now", round(house_prices_train.memory_usage(index=True, deep=True).sum()/byte_to_gb, 5), "GB.")
-
-
-
-
-
-
-
-
-
-
