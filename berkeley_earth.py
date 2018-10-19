@@ -6,6 +6,7 @@ import scipy.stats as stats
 import seaborn as sns
 import time
 # from sklearn
+import datetime as dt
 
 # Change to where house price files are
 os.chdir("/Users/dustinwicker/.kaggle/datasets/berkeleyearth/climate-change-earth-surface-temperature-data")
@@ -113,53 +114,58 @@ global_temps_country.columns = [value.lower() for value in global_temps_country.
 # Lowercase column headers for state
 global_temps_state.columns = [value.lower() for value in global_temps_state.columns]
 
+# Convert dt from object to datetime
+global_temps_country['dt'] = pd.to_datetime(global_temps_country['dt'])
+
 ########################
 ### Data Exploration ###
 ########################
 
-# See unique countries
-global_temps_country.country.value_counts()
-
+# Create empty list to append results to
 missing_by_country = []
 # See percentage missing for each country for each column
 for value in global_temps_country.country.unique():
-    print("Country:", value)
-    print(global_temps_country.loc[global_temps_country.country==value].isnull().sum()/
-                                len(global_temps_country.loc[global_temps_country.country==value]),'\n')
-
-### Start here
-missing_by_country = []
-# See percentage missing for each country for each column
-for value in global_temps_country.country.unique()[0:5]:
-    #### Need to fix below - reset index creates all dataframes with index so when concat, all get concatenated. Only need one index #########
-    missing_by_country.append((global_temps_country.loc[global_temps_country.country==value].isnull().sum()/\
-       len(global_temps_country.loc[global_temps_country.country==value])).reset_index(drop=True).rename(columns={0:value+"'s Missingness"}))
-###### Keeping all indexes even though the same - figure out to only keep one
-test = pd.concat(missing_by_country, axis=1)
-
-
-
-missing_by_country = []
-# See percentage missing for each country for each column
-for value in global_temps_country.country.unique():
-    #### Need to fix below - reset index creates all dataframes with index so when concat, all get concatenated. Only need one index #########
     missing_by_country.append((global_temps_country.loc[global_temps_country.country==value].isnull().sum()/\
        len(global_temps_country.loc[global_temps_country.country==value])).reset_index(drop=True).rename(index=value))
+# Obtain index to use for created dataframe below (missingness)
 index_info = (global_temps_country.loc[global_temps_country.country==value].isnull().sum()/\
        len(global_temps_country.loc[global_temps_country.country==value])).index
-test = pd.concat(missing_by_country, axis=1).rename({0:index_info[0], 1:index_info[1], 2:index_info[2], 3:index_info[3]})
+# Concatenate lists to create dataframe and rename index using index_info
+missingness = pd.concat(missing_by_country, axis=1).rename({0:index_info[0], 1:index_info[1], 2:index_info[2], 3:index_info[3]})
 
-for i in range(len(test)):
-    print(pd.concat(missing_by_country, axis=1).rename({i: index_info[i]}))
+######### Test - Virgin Islands
+# idxmax() finds last row index where there is a missing value in one (or more) of the columns
+# Need to get 567144
+start = global_temps_country.loc[global_temps_country.country=="Virgin Islands"].isna().any(axis=1).iloc[::-1].idxmax()+1
+
+# Find last index
+end = global_temps_country.loc[global_temps_country.country=="Virgin Islands"].index.max()
+
+# All rows of Virgin Islands which have no missing rows from start to end
+global_temps_country.loc[start:end]
+
+# Create average Fahrenheit temperage column
+global_temps_country.loc[start:end, "averagetemperature_f"] = (9/5)*global_temps_country.loc[start:end,
+                                                                    "averagetemperature"] + 32
+# Create average Fahrenheit temperature uncertainty column
+global_temps_country.loc[start:end, "averagetemperatureuncertainty_f"] = (9/5)*global_temps_country.loc[start:end,
+                                                                               "averagetemperatureuncertainty"] + 32
+
+# Print out the dates that we have for a given country/city/state
+print("The is complete data for", global_temps_country.loc[start:end]["country"].unique()[0], "ranges from",
+      global_temps_country.loc[start:end].dt.min(), "to", global_temps_country.loc[start:end].dt.max())
+
+######################
+### Begin plotting ###
+######################
+# Could graph by week or month - # give the user the option
+# Tell user how many values make up each groupedby year (would give full understanding for each year)
+# Group values into year
+global_temps_country.loc[start:end].groupby(global_temps_country.loc[start:end,'dt'].dt.year)['averagetemperature_f'].mean()
 
 
 
 
-
-
-
-
-index_info[0]
 
 # United States is 15% missing from 1768-09-01 to 2013-09-01
 usa_temps = global_temps_country.loc[global_temps_country.country=="United States"].reset_index(drop=True)
